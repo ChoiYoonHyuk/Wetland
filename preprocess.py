@@ -1,11 +1,11 @@
 def data_process(df):
     # Remove some columns with natural languages
-    df = df.drop(columns=['OBJECTID', 'muname', 'mustatus', 'mukey', 'flodfreqmax', 'drclasswettest', 'engdwbdcd', 'engsldcd'])
+    df = df.drop(columns=['OBJECTID', 'muname', 'mustatus', 'mukey', 'flodfreqmax', 'drclasswettest', 'engdwbdcd', 'engsldcd', 'flodfreqdcd', 'musym'])
     
     # Vectorize some columns with discrete values
-    musym = list(set(df['musym']))
+    '''musym = list(set(df['musym']))
     for i in range(len(musym)):
-        df['musym'] = df['musym'].replace(musym[i], i)
+        df['musym'] = df['musym'].replace(musym[i], i)'''
         
     drcls = list(set(df['drclassdcd']))
     for i in range(len(drcls)):
@@ -132,5 +132,6 @@ def data_process(df):
     val = list(set(df['awmmfpwwta']))
     df['awmmfpwwta'] = df['awmmfpwwta'] / max(val)
     print(df.iloc[0])
+    
     # Return
     return df
