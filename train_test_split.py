@@ -19,9 +19,12 @@ def data_split(df):
             freq_ratio[0] += 1
     
     split_idx = [int(x * 0.8) for x in freq_ratio]
+    freq_ratio[0] = 600
+    split_idx[0] = 480
     
     train, valid, test = dict(), dict(), dict()
     train_y, valid_y, test_y = [], [], []
+    num_cls = [0] * 5
     
     for n, val in enumerate(flood_freq):
         if val == "None":
@@ -44,9 +47,12 @@ def data_split(df):
                             if val not in test:
                                 test[val] = [n]
                                 test_y.append(0)
+                                num_cls[0] += 1
                             else:
-                                test[val].append(n)
-                                test_y.append(0)   
+                                if len(test[val]) < int((freq_ratio[0] - split_idx[0]) / 2):
+                                    test[val].append(n)
+                                    test_y.append(0)   
+                                    num_cls[0] += 1
         elif val == "Rare":
             if val not in train:
                 train[val] = [n]
@@ -67,9 +73,12 @@ def data_split(df):
                             if val not in test:
                                 test_y.append(1)
                                 test[val] = [n]
+                                num_cls[1] += 1
                             else:
-                                test_y.append(1)
-                                test[val].append(n)  
+                                if len(test[val]) < int((freq_ratio[1] - split_idx[1]) / 2):
+                                    test_y.append(1)
+                                    test[val].append(n)  
+                                    num_cls[1] += 1
         elif val == "Occasional":
             if val not in train:
                 train[val] = [n]
@@ -90,9 +99,12 @@ def data_split(df):
                             if val not in test:
                                 test_y.append(2)
                                 test[val] = [n]
+                                num_cls[2] += 1
                             else:
-                                test_y.append(2)
-                                test[val].append(n)  
+                                if len(test[val]) < int((freq_ratio[2] - split_idx[2]) / 2):
+                                    test_y.append(2)
+                                    test[val].append(n)  
+                                    num_cls[2] += 1
         elif val == "Frequent":
             if val not in train:
                 train[val] = [n]
@@ -113,9 +125,12 @@ def data_split(df):
                             if val not in test:
                                 test[val] = [n]
                                 test_y.append(3)
+                                num_cls[3] += 1
                             else:
-                                test[val].append(n)  
-                                test_y.append(3)
+                                if len(test[val]) < int((freq_ratio[3] - split_idx[3]) / 2):
+                                    test[val].append(n)  
+                                    test_y.append(3)
+                                    num_cls[3] += 1
         elif val == "Very frequent":
             if val not in train:
                 train[val] = [n]
@@ -136,9 +151,12 @@ def data_split(df):
                             if val not in test:
                                 test[val] = [n]
                                 test_y.append(4)
+                                num_cls[4] += 1
                             else:
-                                test[val].append(n)  
-                                test_y.append(4)
+                                if len(test[val]) < int((freq_ratio[4] - split_idx[4]) / 2):
+                                    test[val].append(n)  
+                                    test_y.append(4)
+                                    num_cls[4] += 1
         else:
             val = "None"
             if val not in train:
@@ -160,7 +178,11 @@ def data_split(df):
                             if val not in test:
                                 test_y.append(0)
                                 test[val] = [n]
+                                num_cls[0] += 1
                             else:
-                                test_y.append(0)
-                                test[val].append(n)  
-    return train, valid, test, train_y, valid_y, test_y
+                                if len(test[val]) < int((freq_ratio[0] - split_idx[0]) / 2):
+                                    test_y.append(0)
+                                    test[val].append(n)  
+                                    num_cls[0] += 1
+    #print(num_cls)
+    return train, valid, test, train_y, valid_y, test_y, split_idx
