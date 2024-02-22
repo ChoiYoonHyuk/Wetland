@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 pd.options.mode.chained_assignment = None
 
 def data_process(df):
@@ -6,7 +7,9 @@ def data_process(df):
     df = df.drop(columns=['OBJECTID', 'musym', 'mustatus', 'mukey', 'flodfreqmax', 'drclasswettest', 'engdwbdcd', 'engsldcd', 'flodfreqdcd'])
     
     # Vectorize some columns with discrete values
-    feat = ['loam', 'clay', 'sand', 'fine', 'soil', 'complex', 'silt', 'coarse', 'outcrop', 'pit', 'flood', 'peat']
+    feat = ['loam', 'clay', 'sand', 'fine', 'soil', 'complex', 'silt', 'coarse', 'outcrop', 'pit', 'flood', 'peat', '1', '2', '3', '4', '10', '25', '100']
+    feat2 = [str(x) for x in range(0, 101, 1)] 
+    #feat.extend(feat2)
     #df[['n1', 'n2', 'n3', 'n4', 'n5', 'n6', 'n7', 'n8', 'n9', 'n10', 'n11', 'n12', 'n13', 'n14', 'n15']] = pd.DataFrame([[0] * 15], index=df.index)
 
     muname = list(set(df['muname']))
@@ -16,11 +19,49 @@ def data_process(df):
             if w in feat:
                 idx = feat.index(w)
                 df.at[i, idx] = 1
+    for i in range(len(muname)):
+        word = muname[i].replace(',', '').split(' ')
+        ls = [0, 0]
+        idx = 0    
+        for w in word:
+            if w in feat2:
+                ls[idx] = feat2.index(w)
+                idx += 1
+        if ls[1] == 1:
+            df.at[i, 12] = 1
+        elif ls[1] == 2:
+            df.at[i, 13] = 1
+        elif ls[1] == 3:
+            df.at[i, 14] = 1
+        elif ls[1] == 4:
+            df.at[i, 15] = 1
+        elif ls[1] > 4 and ls[1] < 11:
+            df.at[i, 16] = 1
+        elif ls[1] > 10 and ls[1] < 26:
+            df.at[i, 17] = 1
+        elif ls[1] > 25:
+            df.at[i, 18] = 1
+    '''histo = [0] * 100
+    for i in range(len(muname)):
+        word = muname[i].replace(',', '').split(' ')
+        ls = [0, 0]
+        idx = 0
+        for w in word:
+            if w in feat2:
+                ls[idx] = feat2.index(w)
+                idx += 1
+        idx = 0
+        tmp = [0] * 100
+        if ls[0] != ls[1]:
+            tmp[ls[0]:ls[1]] = [1] * (ls[1] - ls[0])
+        histo = np.add(histo, tmp)
+    print(histo)
+    exit()'''
     df = df.drop(columns=['muname'])
     
-    for i in range(len(feat)):
-        df[i] = df[i].fillna(0)
-    
+    #for i in range(len(feat)):
+    #    df[i] = df[i].fillna(0)
+    df = df.fillna(0)
     
     df['drclassdcd'] = df['drclassdcd'].fillna(0)
     drcls = list(set(df['drclassdcd']))
