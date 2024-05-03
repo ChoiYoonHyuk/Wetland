@@ -11,7 +11,7 @@ def data_split(df):
             freq_ratio[1] += 1
     
     #split_idx = [int(x * 0.8) for x in freq_ratio]
-    split_idx = [int(freq_ratio[1] * 0.8), int(freq_ratio[1] * 0.8)]
+    split_idx = [int(freq_ratio[0] * 0.1), int(freq_ratio[1] * 0.1)]
     
     train, valid, test = dict(), dict(), dict()
     train_y, valid_y, test_y = [], [], []
@@ -70,7 +70,7 @@ def data_split(df):
                         test_mask.append(True)
                         df_idx.append(n)
 
-    #print(sum(train_mask), sum(valid_mask), sum(test_mask))
+    print(sum(train_mask), sum(valid_mask), sum(test_mask))
     return train_mask, valid_mask, test_mask, label, split_idx, df_idx
     
     

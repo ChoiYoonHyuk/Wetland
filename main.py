@@ -5,17 +5,30 @@ from model import plane_net
 from plot import visualize
 import pandas as pd
 
-#src = pd.read_excel(r"./datasets/florida.xlsx", sheet_name="Sheet1")
-src = pd.read_excel(r"./datasets/seattle.xlsx", sheet_name="Sheet1")
+src = 'arizona'
+#src = 'texas'
+src = 'seattle'
+#src = 'oregon'
+src = 'florida'
+#src = 'louisiana'
 
-trg = pd.read_excel(r"./datasets/texas.xlsx", sheet_name="Sheet1")
+#trg = 'arizona'
+trg = 'texas'
+#trg = 'seattle'
+trg = 'oregon'
+#trg = 'florida'
+trg = 'louisiana'
+
+src_data = pd.read_excel("./datasets/" + src + ".xlsx", sheet_name="Sheet1")
+
+trg_data = pd.read_excel("./datasets/" + trg + ".xlsx", sheet_name="Sheet1")
 
 print("Data Loaded\n")
 
-train_mask, valid_mask, test_mask, label, split_idx, df_idx = data_split(trg)
+train_mask, valid_mask, test_mask, label, split_idx, df_idx = data_split(trg_data)
 print("Data Splitted\n")
 
-src, trg, src_adj, trg_adj, src_label = data_process(src, trg, df_idx)
+src, trg, src_adj, trg_adj, src_label = data_process(src_data, trg_data, df_idx, src, trg)
 print("Data Processed\n")
 
 #d2_plot(df, train, train_y)

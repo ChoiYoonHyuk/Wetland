@@ -6,16 +6,29 @@ import matplotlib.pyplot as plt
 pd.options.mode.chained_assignment = None
 device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
 
-def data_process(src, trg, df_trg):
+def data_process(src, trg, df_trg, s_name, t_name):
     # Remove some columns with natural languages
     df = src.drop(columns=['engdwbdcd', 'engsldcd'])
     
     # Add coordinate information
     #maps = pd.read_excel(r"coordinate_texas.xlsx", sheet_name="TX1")
     #maps = pd.read_excel(r"simp_coordinate.xlsx", sheet_name="TX")
+    feat = 0
     
     # Vectorize some columns with discrete values
-    feat = ['loamy', 'sand', 'fine', 'Bonifay', 'Albany', 'Ortega', '1', '2', '3', '4', '10', '25', '100']
+    if s_name == 'texas':
+        feat = ['loam', 'clay', 'sand', 'fine', 'soil', 'complex', 'silt', 'coarse', 'outcrop', 'pit', 'flood', 'peat', '1', '2', '3', '4', '10', '25', '100']
+    elif s_name == 'florida':
+        feat = ['loamy', 'sand', 'fine', 'Bonifay', 'Albany', 'Ortega', '1', '2', '3', '4', '10', '25', '100']
+    elif s_name == 'oregon':
+        feat = ['loam', 'complex', 'sand', 'peat', 'water', '1', '2', '3', '4', '10', '25', '100']
+    elif s_name == 'louisiana':
+        feat = ['association', 'soils', 'complex', 'muck', 'loam', 'sandy', 'pits', 'slit', '1', '2', '3', '4', '10', '25', '100']
+    elif s_name == 'seattle':
+        feat = ['pits', 'complex', 'loam', 'peat', 'water', '1', '2', '3', '4', '10', '25', '100']
+    elif s_name == 'arizona':
+        feat = ['loam', 'complex', 'sand', 'peat', 'water', '1', '2', '3', '4', '10', '25', '100']
+    
     feat2 = [str(x) for x in range(0, 101, 1)] 
     #feat.extend(feat2)
     #df[['n1', 'n2', 'n3', 'n4', 'n5', 'n6', 'n7', 'n8', 'n9', 'n10', 'n11', 'n12', 'n13', 'n14', 'n15']] = pd.DataFrame([[0] * 15], index=df.index)
@@ -29,6 +42,7 @@ def data_process(src, trg, df_trg):
                 idx = feat.index(w)
                 df.at[i, idx] = 1
     
+    pad = len(feat) - 7
     for i in range(len(muname)):
         word = muname[i].replace(',', '').split(' ')
         ls = [0, 0]
@@ -37,20 +51,22 @@ def data_process(src, trg, df_trg):
             if w in feat2:
                 ls[idx] = feat2.index(w)
                 idx += 1
+            if idx > 1:
+                break
         if ls[1] == 1:
-            df.at[i, 6] = 1
+            df.at[i, pad] = 1
         elif ls[1] == 2:
-            df.at[i, 7] = 1
+            df.at[i, pad+1] = 1
         elif ls[1] == 3:
-            df.at[i, 8] = 1
+            df.at[i, pad+2] = 1
         elif ls[1] == 4:
-            df.at[i, 9] = 1
+            df.at[i, pad+3] = 1
         elif ls[1] > 4 and ls[1] < 11:
-            df.at[i, 10] = 1
+            df.at[i, pad+4] = 1
         elif ls[1] > 10 and ls[1] < 26:
-            df.at[i, 11] = 1
+            df.at[i, pad+5] = 1
         elif ls[1] > 25:
-            df.at[i, 12] = 1
+            df.at[i, pad+6] = 1
     df = df.drop(columns=['muname'])
     
     df = df.fillna(0)
@@ -247,9 +263,22 @@ def data_process(src, trg, df_trg):
     # Add coordinate information
     #maps = pd.read_excel(r"coordinate_texas.xlsx", sheet_name="TX1")
     #maps = pd.read_excel(r"simp_coordinate.xlsx", sheet_name="TX")
+    feat = 0
     
     # Vectorize some columns with discrete values
-    feat = ['loam', 'clay', 'sand', 'fine', 'soil', 'complex', 'silt', 'coarse', 'outcrop', 'pit', 'flood', 'peat', '1', '2', '3', '4', '10', '25', '100']
+    if t_name == 'texas':
+        feat = ['loam', 'clay', 'sand', 'fine', 'soil', 'complex', 'silt', 'coarse', 'outcrop', 'pit', 'flood', 'peat', '1', '2', '3', '4', '10', '25', '100']
+    elif t_name == 'florida':
+        feat = ['loamy', 'sand', 'fine', 'Bonifay', 'Albany', 'Ortega', '1', '2', '3', '4', '10', '25', '100']
+    elif t_name == 'oregon':
+        feat = ['loam', 'complex', 'sand', 'peat', 'water', '1', '2', '3', '4', '10', '25', '100']
+    elif t_name == 'louisiana':
+        feat = ['association', 'soils', 'complex', 'muck', 'loam', 'sandy', 'pits', 'slit', '1', '2', '3', '4', '10', '25', '100']
+    elif t_name == 'seattle':
+        feat = ['pits', 'complex', 'loam', 'peat', 'water', '1', '2', '3', '4', '10', '25', '100']
+    elif t_name == 'arizona':
+        feat = ['loam', 'complex', 'sand', 'peat', 'water', '1', '2', '3', '4', '10', '25', '100']
+        
     feat2 = [str(x) for x in range(0, 101, 1)] 
     #feat.extend(feat2)
     #df[['n1', 'n2', 'n3', 'n4', 'n5', 'n6', 'n7', 'n8', 'n9', 'n10', 'n11', 'n12', 'n13', 'n14', 'n15']] = pd.DataFrame([[0] * 15], index=df.index)
@@ -263,6 +292,7 @@ def data_process(src, trg, df_trg):
                 idx = feat.index(w)
                 df.at[i, idx] = 1
     
+    pad = len(feat) - 7
     for i in range(len(muname)):
         word = muname[i].replace(',', '').split(' ')
         ls = [0, 0]
@@ -271,20 +301,22 @@ def data_process(src, trg, df_trg):
             if w in feat2:
                 ls[idx] = feat2.index(w)
                 idx += 1
+            if idx > 1:
+                break
         if ls[1] == 1:
-            df.at[i, 12] = 1
+            df.at[i, pad] = 1
         elif ls[1] == 2:
-            df.at[i, 13] = 1
+            df.at[i, pad+1] = 1
         elif ls[1] == 3:
-            df.at[i, 14] = 1
+            df.at[i, pad+2] = 1
         elif ls[1] == 4:
-            df.at[i, 15] = 1
+            df.at[i, pad+3] = 1
         elif ls[1] > 4 and ls[1] < 11:
-            df.at[i, 16] = 1
+            df.at[i, pad+4] = 1
         elif ls[1] > 10 and ls[1] < 26:
-            df.at[i, 17] = 1
+            df.at[i, pad+5] = 1
         elif ls[1] > 25:
-            df.at[i, 18] = 1
+            df.at[i, pad+6] = 1
     '''histo = [0] * 100
     for i in range(len(muname)):
         word = muname[i].replace(',', '').split(' ')
@@ -477,6 +509,7 @@ def data_process(src, trg, df_trg):
         row = torch.topk(-cdist[idx], topk+1)
         trg_adj[idx] = torch.where(-cdist[idx] >= -cdist[idx][row[1][topk]], 1, 0)
     
+    df = df.fillna(0)
     df = df.drop(columns=['wetland'])
     trg = df.drop(columns=['x', 'y'])
     

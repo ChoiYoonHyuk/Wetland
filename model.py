@@ -43,17 +43,17 @@ class Wetland(nn.Module):
         super(Wetland, self).__init__()
         self.src_fe = nn.Sequential(
             nn.Linear(dim, 32),
-            nn.Sigmoid(),
+            nn.ReLU(),
             nn.Dropout(),
         )
         self.shr_fe = nn.Sequential(
             nn.Linear(dim, 32),
-            nn.Sigmoid(),
+            nn.ReLU(),
             nn.Dropout(),
         )
         self.trg_fe = nn.Sequential(
             nn.Linear(dim, 32),
-            nn.Sigmoid(),
+            nn.ReLU(),
             nn.Dropout(),
         )
         
@@ -72,10 +72,10 @@ class Wetland(nn.Module):
         trg_edge = torch.tensor(trg_edge[0]).to(device)
         
         src_shr = self.shr_fe(src)
-        src = self.src_fe(src)
+        src = self.src_fe(src) + src_shr
         
         trg_shr = self.shr_fe(trg)
-        trg = self.trg_fe(trg)
+        trg = self.trg_fe(trg) + trg_shr
         
         # Discriminator
         ############################################################################
@@ -244,11 +244,11 @@ def plane_net(src, trg, src_adj, trg_adj, train_mask, valid_mask, test_mask, src
         
         src_y = torch.tensor(src_label, dtype=torch.long, device=device)
         trg_y = torch.tensor(label, dtype=torch.long, device=device)
-    
+        
         if cross_entropy_loss:
             loss = criterion(out, y) + d_loss * .01
         else:
-            loss = F.nll_loss(src_out, src_y) * 0 + F.nll_loss(trg_out[train_mask], trg_y[train_mask]) + d_loss * .01
+            loss = F.nll_loss(src_out, src_y) + F.nll_loss(trg_out[train_mask], trg_y[train_mask]) + d_loss * .01
         # Optimize
         optim.zero_grad()
         loss.backward()
@@ -267,7 +267,10 @@ def plane_net(src, trg, src_adj, trg_adj, train_mask, valid_mask, test_mask, src
         #test_acc = accuracy(pred, y[test_mask])
         correct = float(pred.eq(trg_y[test_mask]).sum().item())
         test_acc = correct / sum(test_mask)
-        print(pred)
+        
+        print(test_acc)
+        #print(pred)
+        
         #real_test = torch.tensor(test_y, dtype=torch.long, device=device)
         #f1_score = f1(pred, real_test)
         
@@ -284,8 +287,8 @@ def plane_net(src, trg, src_adj, trg_adj, train_mask, valid_mask, test_mask, src
             pred_save = pred
             early_stop = 0
         
-        if early_stop > 100:
-            print(sum(torch.where(pred == 0, 1, 0)) / len(pred), sum(torch.where(pred == 1, 1, 0)) / len(pred), sum(torch.where(pred == 2, 1, 0)) / len(pred), sum(torch.where(pred == 3, 1, 0)) / len(pred), sum(torch.where(pred == 4, 1, 0)) / len(pred))
+        if early_stop > 500:
+            #print(sum(torch.where(pred == 0, 1, 0)) / len(pred), sum(torch.where(pred == 1, 1, 0)) / len(pred), sum(torch.where(pred == 2, 1, 0)) / len(pred), sum(torch.where(pred == 3, 1, 0)) / len(pred), sum(torch.where(pred == 4, 1, 0)) / len(pred))
             stop = True
             _, pred = test_pred.max(dim=1)
             cm = confusion_matrix(real_test.cpu(), pred.cpu())
