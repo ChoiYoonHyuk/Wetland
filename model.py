@@ -10,7 +10,8 @@ from torch.utils.data import DataLoader, TensorDataset
 from torch import Tensor
 import seaborn as sns
 import matplotlib.pyplot as plt
-from torch_geometric.nn import GCNConv, FAConv
+from torchmetrics.functional.pairwise import pairwise_cosine_similarity
+from torch_geometric.nn import GCNConv, FAConv, SignedGCN
 from torch_geometric.utils.sparse import dense_to_sparse
 from sklearn.metrics import confusion_matrix
 from torch.autograd import Function
@@ -57,25 +58,48 @@ class Wetland(nn.Module):
             nn.Dropout(),
         )
         
+        self.src_att = nn.Sequential(
+            nn.Linear(64, 16),
+            nn.ReLU(),
+            nn.Dropout(),
+            nn.Linear(16, 2),
+        )
+        
+        self.trg_att = nn.Sequential(
+            nn.Linear(64, 16),
+            nn.ReLU(),
+            nn.Dropout(),
+            nn.Linear(16, 2),
+        )
+        
         self.discriminator = nn.Sequential(
             nn.Linear(32, 16),
             nn.ReLU(),
             nn.Linear(16, 1),
         )
         
-        self.fagcn = FAConv(32, eps=.5, dropout=.5)
+        self.fagcn_src = FAConv(32, eps=.9, dropout=.0)
+        self.fagcn_trg = FAConv(32, eps=.9, dropout=.0)
         
-        self.pred = nn.Linear(32, 2)
+        self.pred_src = nn.Linear(32, 2)
+        self.pred_trg = nn.Linear(32, 2)
         
-    def forward(self, src, src_edge, trg, trg_edge):
+        self.gcn_1 = GCNConv(32, 16)
+        self.gcn_2 = GCNConv(16, 2)
+        
+    def forward(self, src, src_edge, trg, trg_edge, without_gnn):
         src_edge = torch.tensor(src_edge[0]).to(device)
         trg_edge = torch.tensor(trg_edge[0]).to(device)
         
         src_shr = self.shr_fe(src)
-        src = self.src_fe(src) + src_shr
+        src_spe = self.src_fe(src)
+        src_att = F.softmax(self.src_att(torch.cat((src_shr, src_spe), 1)), 1)
+        src = src_shr * src_att[:, 0].view(-1, 1) + src_spe * src_att[:, 1].view(-1, 1)
         
         trg_shr = self.shr_fe(trg)
-        trg = self.trg_fe(trg) + trg_shr
+        trg_spe = self.trg_fe(trg)
+        trg_att = F.softmax(self.trg_att(torch.cat((trg_shr, trg_spe), 1)), 1)
+        trg = trg_shr * trg_att[:, 0].view(-1, 1) + trg_spe * trg_att[:, 1].view(-1, 1)
         
         # Discriminator
         ############################################################################
@@ -90,23 +114,39 @@ class Wetland(nn.Module):
         trg_shr_dis = self.discriminator(trg_shr_dis).squeeze(1)
         t_shr_dis_loss = F.binary_cross_entropy_with_logits(trg_shr_dis, t_dis_label)
         
-        src_spe_dis = self.discriminator(src).squeeze(1)
+        src_spe_dis = self.discriminator(src_spe).squeeze(1)
         s_spe_dis_loss = F.binary_cross_entropy_with_logits(src_spe_dis, s_dis_label)
         
-        trg_spe_dis = self.discriminator(trg).squeeze(1)
+        trg_spe_dis = self.discriminator(trg_spe).squeeze(1)
         t_spe_dis_loss = F.binary_cross_entropy_with_logits(trg_spe_dis, t_dis_label)
         
         disc_loss = s_shr_dis_loss + t_shr_dis_loss + s_spe_dis_loss + t_spe_dis_loss
         #############################################################################
         
+        if without_gnn:
+            src_out, trg_out = self.pred(src), self.pred(trg)
+            return src_out, trg_out, disc_loss
+        
         # Heterophilic GNN
         ####################################################
-        src_x = self.fagcn(src, src, src_edge)
-        src_out = self.pred(self.fagcn(src_x, src, src_edge))
+        src_x = self.fagcn_src(src, src, src_edge)
+        src_x = self.fagcn_src(src_x, src, src_edge)
+        src_x = self.fagcn_src(src_x, src, src_edge)
+        src_x = self.fagcn_src(src_x, src, src_edge)
+        src_out = self.pred_src(src_x)
         
-        trg_x = self.fagcn(trg, trg, trg_edge)
-        trg_out = self.pred(self.fagcn(trg_x, trg, trg_edge))
+        trg_x = self.fagcn_trg(trg, trg, trg_edge)
+        trg_x = self.fagcn_trg(trg_x, trg, trg_edge)
+        trg_x = self.fagcn_trg(trg_x, trg, trg_edge)
+        trg_x = self.fagcn_trg(trg_x, trg, trg_edge)
+        trg_out = self.pred_trg(trg_x)
         ####################################################
+        
+        # GCN
+        '''src_x = F.dropout(F.relu(self.gcn_1(src, src_edge)))
+        src_out = self.gcn_2(src_x, src_edge)
+        trg_x = F.dropout(F.relu(self.gcn_1(trg, trg_edge)))
+        trg_out = self.gcn_2(trg_x, trg_edge)'''
         
         return src_out, trg_out, disc_loss
         
@@ -170,7 +210,7 @@ def accuracy(out, y):
     return result
     
         
-def plane_net(src, trg, src_adj, trg_adj, train_mask, valid_mask, test_mask, src_label, label, split_idx):
+def plane_net(src, trg, src_adj, trg_adj, train_mask, valid_mask, test_mask, src_label, label, split_idx, wo_gnn):
     # Model
     print('Start Training ... \n')
     '''count = 0
@@ -239,7 +279,7 @@ def plane_net(src, trg, src_adj, trg_adj, train_mask, valid_mask, test_mask, src
     for i in range(3000):
         if stop:
             break
-        src_pred, trg_pred, d_loss = model(x_src, dense_to_sparse(src_adj), x_trg, dense_to_sparse(trg_adj))
+        src_pred, trg_pred, d_loss = model(x_src, dense_to_sparse(src_adj), x_trg, dense_to_sparse(trg_adj), wo_gnn)
         src_out, trg_out = F.log_softmax(src_pred, dim=1), F.log_softmax(trg_pred, dim=1)
         
         src_y = torch.tensor(src_label, dtype=torch.long, device=device)
@@ -248,7 +288,7 @@ def plane_net(src, trg, src_adj, trg_adj, train_mask, valid_mask, test_mask, src
         if cross_entropy_loss:
             loss = criterion(out, y) + d_loss * .01
         else:
-            loss = F.nll_loss(src_out, src_y) + F.nll_loss(trg_out[train_mask], trg_y[train_mask]) + d_loss * .01
+            loss = F.nll_loss(src_out, src_y) + F.nll_loss(trg_out[train_mask], trg_y[train_mask]) + d_loss * .2
         # Optimize
         optim.zero_grad()
         loss.backward()
@@ -269,7 +309,8 @@ def plane_net(src, trg, src_adj, trg_adj, train_mask, valid_mask, test_mask, src
         test_acc = correct / sum(test_mask)
         
         print(test_acc)
-        #print(pred)
+        #print(trg_y[test_mask].tolist())
+        #print(pred.tolist())
         
         #real_test = torch.tensor(test_y, dtype=torch.long, device=device)
         #f1_score = f1(pred, real_test)

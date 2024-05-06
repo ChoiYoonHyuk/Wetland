@@ -27,7 +27,7 @@ def data_process(src, trg, df_trg, s_name, t_name):
     elif s_name == 'seattle':
         feat = ['pits', 'complex', 'loam', 'peat', 'water', '1', '2', '3', '4', '10', '25', '100']
     elif s_name == 'arizona':
-        feat = ['loam', 'complex', 'sand', 'peat', 'water', '1', '2', '3', '4', '10', '25', '100']
+        feat = ['loamy', 'complex', 'association', 'loam', 'sandy', 'peat', 'water', '1', '2', '3', '4', '10', '25', '100']
     
     feat2 = [str(x) for x in range(0, 101, 1)] 
     #feat.extend(feat2)

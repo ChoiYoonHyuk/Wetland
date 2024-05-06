@@ -22,7 +22,7 @@ def data_split(df):
     wetland = df["wetland"]
     for n, val in enumerate(wetland):
         if val == 0:
-            if len(train_y) < split_idx[1]:
+            if len(train_y) < split_idx[0]:
                 train_y.append(0)
                 label.append(0)
                 train_mask.append(True)
